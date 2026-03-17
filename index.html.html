@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Value Analyst — Graham · Buffett · Finnhub</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+    :root {
+      --c-bg:#0a0e14;--c-surface:#111620;--c-surface2:#161c28;--c-border:#1e2a3a;
+      --c-accent:#00d4aa;--c-warn:#f5a623;--c-danger:#e85555;
+      --c-text:#c8d8e8;--c-muted:#5a7a9a;--c-green:#2ecc8a;
+      --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--c-bg);font-family:var(--sans);color:var(--c-text);min-height:100vh;padding:32px 24px;}
+    #app{max-width:900px;margin:0 auto;}
+    .terminal-header{display:flex;align-items:center;gap:14px;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--c-border);}
+    .logo-mark{width:36px;height:36px;background:var(--c-accent);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);flex-shrink:0;}
+    .title-block h1{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--c-accent);letter-spacing:2px;text-transform:uppercase;}
+    .title-block p{font-size:11px;color:var(--c-muted);font-family:var(--mono);letter-spacing:1px;margin-top:2px;}
+    .live-badge{margin-left:auto;background:rgba(46,204,138,0.15);border:1px solid var(--c-green);color:var(--c-green);font-family:var(--mono);font-size:10px;letter-spacing:1.5px;padding:5px 12px;border-radius:3px;display:flex;align-items:center;gap:7px;}
+    .live-dot{width:7px;height:7px;border-radius:50%;background:var(--c-green);animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+    .search-bar{display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap;}
+    .ticker-input{background:var(--c-surface);border:1px solid var(--c-border);color:var(--c-text);font-family:var(--mono);font-size:16px;padding:11px 18px;border-radius:5px;width:160px;text-transform:uppercase;letter-spacing:3px;transition:border-color 0.2s;}
+    .ticker-input:focus{outline:none;border-color:var(--c-accent);}
+    .ticker-input::placeholder{color:var(--c-muted);letter-spacing:1px;font-size:12px;}
+    .analyze-btn{background:var(--c-accent);color:#000;border:none;font-family:var(--mono);font-size:12px;font-weight:600;padding:11px 24px;border-radius:5px;cursor:pointer;letter-spacing:1.5px;text-transform:uppercase;transition:opacity 0.2s,transform 0.1s;}
+    .analyze-btn:hover{opacity:0.88;}
+    .analyze-btn:active{transform:scale(0.98);}
+    .analyze-btn:disabled{opacity:0.35;cursor:not-allowed;}
+    .quick-picks{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;align-items:center;}
+    .qp-label{font-family:var(--mono);font-size:10px;color:var(--c-muted);letter-spacing:1.5px;}
+    .quick-pick{background:var(--c-surface);border:1px solid var(--c-border);color:var(--c-muted);font-family:var(--mono);font-size:11px;padding:5px 13px;border-radius:3px;cursor:pointer;transition:all 0.15s;letter-spacing:1px;}
+    .quick-pick:hover{border-color:var(--c-accent);color:var(--c-accent);}
+    .loading-state{display:flex;flex-direction:column;gap:10px;padding:28px;}
+    .loading-row{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:12px;}
+    .spinner{width:15px;height:15px;border:2px solid var(--c-border);border-top-color:var(--c-accent);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;}
+    .check{width:15px;font-size:14px;color:var(--c-green);flex-shrink:0;text-align:center;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .stock-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding:18px 22px;background:var(--c-surface);border:1px solid var(--c-border);border-radius:7px;gap:16px;flex-wrap:wrap;}
+    .stock-name{font-size:22px;font-weight:600;color:#fff;margin-top:2px;}
+    .stock-ticker-lbl{font-family:var(--mono);font-size:13px;color:var(--c-accent);letter-spacing:2px;}
+    .price-row{display:flex;align-items:baseline;gap:12px;margin-top:10px;flex-wrap:wrap;}
+    .live-price{font-family:var(--mono);font-size:28px;font-weight:600;color:#fff;}
+    .price-change{font-family:var(--mono);font-size:14px;}
+    .data-tag{font-family:var(--mono);font-size:10px;color:var(--c-accent);background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.25);padding:2px 9px;border-radius:3px;}
+    .verdict-badge{padding:9px 20px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;white-space:nowrap;}
+    .verdict-buy{background:rgba(46,204,138,0.15);color:var(--c-green);border:1px solid var(--c-green);}
+    .verdict-hold{background:rgba(245,166,35,0.15);color:var(--c-warn);border:1px solid var(--c-warn);}
+    .verdict-avoid{background:rgba(232,85,85,0.15);color:var(--c-danger);border:1px solid var(--c-danger);}
+    .score-circle{width:84px;height:84px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid var(--c-accent);}
+    .score-num{font-family:var(--mono);font-size:24px;font-weight:600;line-height:1;}
+    .score-lbl{font-size:9px;color:var(--c-muted);letter-spacing:1px;font-family:var(--mono);text-transform:uppercase;margin-top:2px;}
+    .intrinsic-block{margin-bottom:22px;padding:18px 22px;background:var(--c-surface2);border:1px solid var(--c-border);border-left:3px solid var(--c-accent);border-radius:6px;}
+    .intrinsic-label{font-family:var(--mono);font-size:10px;color:var(--c-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+    .intrinsic-values{display:flex;gap:36px;align-items:baseline;flex-wrap:wrap;}
+    .iv-name{font-size:11px;color:var(--c-muted);margin-bottom:4px;}
+    .iv-val{font-family:var(--mono);font-size:22px;font-weight:600;color:#fff;}
+    .iv-margin{font-size:12px;margin-top:6px;}
+    .section-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--c-muted);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+    .section-title::after{content:'';flex:1;height:1px;background:var(--c-border);}
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:22px;}
+    .metric-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:5px;padding:14px 16px;}
+    .metric-label{font-family:var(--mono);font-size:10px;color:var(--c-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
+    .metric-value{font-family:var(--mono);font-size:20px;font-weight:600;color:#fff;}
+    .metric-signal{font-size:10px;margin-top:5px;font-family:var(--mono);}
+    .sig-green{color:var(--c-green)}.sig-warn{color:var(--c-warn)}.sig-danger{color:var(--c-danger)}.sig-neutral{color:var(--c-muted)}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px;}
+    .panel{background:var(--c-surface);border:1px solid var(--c-border);border-radius:6px;padding:18px;}
+    .moat-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--c-border);font-size:13px;}
+    .moat-item:last-child{border-bottom:none;}
+    .moat-score{font-family:var(--mono);font-size:11px;padding:3px 11px;border-radius:3px;}
+    .score-strong{background:rgba(46,204,138,0.15);color:var(--c-green);}
+    .score-moderate{background:rgba(245,166,35,0.15);color:var(--c-warn);}
+    .score-weak{background:rgba(232,85,85,0.15);color:var(--c-danger);}
+    .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+    .bar-label{font-family:var(--mono);font-size:11px;color:var(--c-muted);width:112px;flex-shrink:0;}
+    .bar-track{flex:1;height:6px;background:var(--c-border);border-radius:3px;overflow:hidden;}
+    .bar-fill{height:100%;border-radius:3px;transition:width 1s ease;}
+    .bar-val{font-family:var(--mono);font-size:11px;color:var(--c-text);width:46px;text-align:right;flex-shrink:0;}
+    .sentiment-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:6px;}
+    .risk-flags{display:flex;flex-direction:column;gap:9px;}
+    .risk-flag{display:flex;align-items:center;gap:10px;font-size:12px;}
+    .flag-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .flag-low{background:var(--c-green)}.flag-mid{background:var(--c-warn)}.flag-high{background:var(--c-danger)}
+    .peers-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .peer-chip{font-family:var(--mono);font-size:11px;padding:4px 12px;border:1px solid var(--c-border);border-radius:3px;color:var(--c-muted);cursor:pointer;transition:all 0.15s;background:transparent;}
+    .peer-chip:hover{border-color:var(--c-accent);color:var(--c-accent);}
+    .ai-analysis{background:var(--c-surface);border:1px solid var(--c-border);border-radius:6px;padding:20px;margin-bottom:22px;}
+    .ai-text{font-size:13px;line-height:1.8;color:var(--c-text);white-space:pre-wrap;}
+    .disclaimer{font-size:10px;color:var(--c-muted);font-family:var(--mono);padding:16px 0 40px;border-top:1px solid var(--c-border);line-height:1.7;}
+    .error-msg{padding:24px;font-family:var(--mono);font-size:12px;color:var(--c-danger);}
+    @media(max-width:580px){body{padding:20px 16px;}.two-col{grid-template-columns:1fr}.metrics-grid{grid-template-columns:repeat(2,1fr)}.intrinsic-values{gap:18px}.stock-name{font-size:18px;}}
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div class="terminal-header">
+    <div class="logo-mark"></div>
+    <div class="title-block">
+      <h1>Value Analyst</h1>
+      <p>Graham · Buffett · Finnhub Live Data</p>
+    </div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" class="ticker-input" id="tickerInput" placeholder="TICKER" maxlength="10"/>
+    <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">Analyze ↗</button>
+  </div>
+
+  <div class="quick-picks">
+    <span class="qp-label">QUICK:</span>
+    <button class="quick-pick" onclick="setTicker('AAPL')">AAPL</button>
+    <button class="quick-pick" onclick="setTicker('MSFT')">MSFT</button>
+    <button class="quick-pick" onclick="setTicker('KO')">KO</button>
+    <button class="quick-pick" onclick="setTicker('JNJ')">JNJ</button>
+    <button class="quick-pick" onclick="setTicker('WMT')">WMT</button>
+    <button class="quick-pick" onclick="setTicker('BRK.B')">BRK.B</button>
+    <button class="quick-pick" onclick="setTicker('NVDA')">NVDA</button>
+    <button class="quick-pick" onclick="setTicker('TSLA')">TSLA</button>
+    <button class="quick-pick" onclick="setTicker('AMZN')">AMZN</button>
+    <button class="quick-pick" onclick="setTicker('GOOGL')">GOOGL</button>
+  </div>
+
+  <div id="output"></div>
+
+</div>
+<script>
+const FH   = 'd6soc39r01qoqoiqr840d6soc39r01qoqoiqr84g';
+const BASE = 'https://finnhub.io/api/v1';
+
+function setTicker(t){ document.getElementById('tickerInput').value = t; }
+function fh(path){ return fetch(`${BASE}${path}&token=${FH}`).then(r=>r.json()); }
+
+function setLoading(steps){
+  document.getElementById('output').innerHTML = `<div class="loading-state">${steps.map((s,i)=>`
+    <div class="loading-row" id="step${i}"><div class="spinner"></div><span style="color:var(--c-muted)">${s}</span></div>`).join('')}</div>`;
+}
+
+function stepDone(i){
+  const el=document.getElementById('step'+i); if(!el) return;
+  el.querySelector('.spinner').outerHTML='<div class="check">✓</div>';
+  el.querySelector('span').style.color='var(--c-green)';
+}
+
+async function runAnalysis(){
+  const ticker=document.getElementById('tickerInput').value.trim().toUpperCase();
+  if(!ticker) return;
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;
+
+  setLoading([
+    `Fetching live quote — ${ticker}`,
+    `Loading company profile`,
+    `Pulling financial metrics`,
+    `Getting analyst sentiment`,
+    `Running Graham–Buffett valuation`
+  ]);
+
+  try{
+    const quote=await fh(`/quote?symbol=${ticker}`);
+    if(!quote||quote.c===0||quote.c===undefined||quote.c===null){
+      document.getElementById('output').innerHTML=`<div class="error-msg">⚠ Ticker "${ticker}" not found on Finnhub. Check the symbol and try again.</div>`;
+      btn.disabled=false; return;
+    }
+    stepDone(0);
+
+    const [profile,metrics,sentiment,peers]=await Promise.all([
+      fh(`/stock/profile2?symbol=${ticker}`),
+      fh(`/stock/metric?symbol=${ticker}&metric=all`),
+      fh(`/news-sentiment?symbol=${ticker}`),
+      fh(`/stock/peers?symbol=${ticker}`)
+    ]);
+    stepDone(1); stepDone(2); stepDone(3);
+
+    const m=metrics.metric||{};
+    const livePrice=quote.c, change=quote.d||0, changePct=quote.dp||0;
+
+    const f={
+      companyName: profile.name||ticker,
+      sector:      profile.finnhubIndustry||'N/A',
+      exchange:    profile.exchange||'',
+      marketCap:   profile.marketCapitalization ? profile.marketCapitalization*1e6 : null,
+      peRatio:     m['peNormalizedAnnual']||m['peTTM']||null,
+      pbRatio:     m['pbAnnual']||m['pbQuarterly']||null,
+      roe:         m['roeRfy']||m['roeTTM']||null,
+      roic:        m['roicTTM']||null,
+      debtToEquity:m['totalDebt/totalEquityAnnual']||m['longTermDebt/equityAnnual']||null,
+      currentRatio:m['currentRatioAnnual']||m['currentRatioQuarterly']||null,
+      grossMargin: m['grossMarginTTM']||m['grossMarginAnnual']||null,
+      opMargin:    m['operatingMarginTTM']||null,
+      netMargin:   m['netProfitMarginTTM']||null,
+      fcfYield:    m['fcfYieldTTM']||null,
+      divYield:    m['dividendYieldIndicatedAnnual']||null,
+      eps:         m['epsNormalizedAnnual']||m['epsTTM']||null,
+      bookValue:   m['bookValuePerShareAnnual']||m['bookValuePerShareQuarterly']||null,
+      revGrowth:   m['revenueGrowth3Y']||m['revenueGrowth5Y']||null,
+      epsGrowth:   m['epsGrowth3Y']||m['epsGrowth5Y']||null,
+      high52:      m['52WeekHigh']||null,
+      low52:       m['52WeekLow']||null,
+      beta:        m['beta']||null,
+      bullishPct:  sentiment.sentiment?.bullishPercent||null,
+      bearishPct:  sentiment.sentiment?.bearishPercent||null,
+      peers:       Array.isArray(peers)?peers.filter(p=>p!==ticker).slice(0,6):[]
+    };
+
+    const prompt=`You are a professional value investor trained in Benjamin Graham and Warren Buffett principles.
+
+REAL live data for ${ticker} (${f.companyName}):
+- Current Price: $${livePrice}
+- Sector: ${f.sector}
+- P/E: ${f.peRatio??'N/A'}
+- P/B: ${f.pbRatio??'N/A'}
+- ROE: ${f.roe??'N/A'}%
+- ROIC: ${f.roic??'N/A'}%
+- Debt/Equity: ${f.debtToEquity??'N/A'}
+- Current Ratio: ${f.currentRatio??'N/A'}
+- Gross Margin: ${f.grossMargin??'N/A'}%
+- Operating Margin: ${f.opMargin??'N/A'}%
+- Net Margin: ${f.netMargin??'N/A'}%
+- FCF Yield: ${f.fcfYield??'N/A'}%
+- Dividend Yield: ${f.divYield??'N/A'}%
+- EPS: ${f.eps??'N/A'}
+- Book Value/Share: ${f.bookValue??'N/A'}
+- Revenue Growth 3Y: ${f.revGrowth??'N/A'}%
+- EPS Growth 3Y: ${f.epsGrowth??'N/A'}%
+- 52W High/Low: ${f.high52??'N/A'} / ${f.low52??'N/A'}
+- Beta: ${f.beta??'N/A'}
+- Market Cap: ${f.marketCap?'$'+(f.marketCap/1e9).toFixed(1)+'B':'N/A'}
+
+Using these real numbers compute:
+1. Graham Number = sqrt(22.5 * EPS * BookValue)
+2. DCF intrinsic value estimate
+3. Margin of safety = (avgIV - price) / avgIV * 100
+
+Return ONLY valid JSON, no markdown:
+{"ticker":"${ticker}","companyName":"${f.companyName}","sector":"${f.sector}","currentPrice":${livePrice},"priceChange":${change},"priceChangePct":${changePct},"intrinsicValueDCF":0,"intrinsicValueGraham":0,"marginOfSafety":0,"peRatio":${f.peRatio??0},"pbRatio":${f.pbRatio??0},"debtToEquity":${f.debtToEquity??0},"roe":${f.roe??0},"fcfYield":${f.fcfYield??0},"dividendYield":${f.divYield??0},"revenueGrowth5yr":${f.revGrowth??0},"earningsGrowth5yr":${f.epsGrowth??0},"currentRatio":${f.currentRatio??0},"grossMargin":${f.grossMargin??0},"operatingMargin":${f.opMargin??0},"verdict":"BUY|HOLD|AVOID","valueScore":0,"moatFactors":[{"name":"Brand strength","rating":"Strong|Moderate|Weak"},{"name":"Switching costs","rating":"Strong|Moderate|Weak"},{"name":"Cost advantage","rating":"Strong|Moderate|Weak"},{"name":"Network effects","rating":"Strong|Moderate|Weak"},{"name":"Pricing power","rating":"Strong|Moderate|Weak"}],"riskFlags":[{"level":"low|mid|high","text":"risk 1"},{"level":"low|mid|high","text":"risk 2"},{"level":"low|mid|high","text":"risk 3"}],"qualitativeAnalysis":"3-4 sentences on moat, management, valuation vs Graham/Buffett, key thesis or concern."}`;
+
+    const aiResp=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+    });
+    const aiData=await aiResp.json();
+    const raw=aiData.content.map(b=>b.text||'').join('');
+    const clean=raw.replace(/```json|```/g,'').trim();
+    let d;
+    try{d=JSON.parse(clean);}
+    catch(e){document.getElementById('output').innerHTML=`<div class="error-msg">Parse error — please try again.</div>`;btn.disabled=false;return;}
+    stepDone(4);
+    setTimeout(()=>renderResult(d,f,quote),400);
+  }catch(err){
+    document.getElementById('output').innerHTML=`<div class="error-msg">Error: ${err.message}</div>`;
+  }
+  btn.disabled=false;
+}
+
+function fmt(n,dec=1){if(n===undefined||n===null||isNaN(n)||n===0)return 'N/A';return Number(n).toFixed(dec);}
+function fmtMcap(n){if(!n)return 'N/A';if(n>=1e12)return '$'+(n/1e12).toFixed(2)+'T';if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B';return '$'+(n/1e6).toFixed(0)+'M';}
+function sigClass(m,v){if(!v||isNaN(v))return 'sig-neutral';const t={pe:v=>v<15?'sig-green':v<25?'sig-warn':'sig-danger',pb:v=>v<1.5?'sig-green':v<3?'sig-warn':'sig-danger',de:v=>v<0.5?'sig-green':v<1.5?'sig-warn':'sig-danger',roe:v=>v>15?'sig-green':v>8?'sig-warn':'sig-danger',fcf:v=>v>5?'sig-green':v>2?'sig-warn':'sig-danger',cr:v=>v>2?'sig-green':v>1?'sig-warn':'sig-danger',gm:v=>v>40?'sig-green':v>20?'sig-warn':'sig-danger',om:v=>v>20?'sig-green':v>10?'sig-warn':'sig-danger'};return(t[m]||(()=>'sig-neutral'))(v);}
+function sigLabel(m,v){if(!v||isNaN(v))return '— No data';const t={pe:v=>v<15?'▼ Undervalued':v<25?'◆ Fair':'▲ Expensive',pb:v=>v<1.5?'▼ Below book':v<3?'◆ Moderate':'▲ Premium',de:v=>v<0.5?'✓ Low leverage':v<1.5?'◆ Manageable':'⚠ High debt',roe:v=>v>15?'✓ Excellent':v>8?'◆ Adequate':'⚠ Weak returns',fcf:v=>v>5?'✓ High yield':v>2?'◆ Moderate':'⚠ Low yield',cr:v=>v>2?'✓ Strong':v>1?'◆ Adequate':'⚠ Tight',gm:v=>v>40?'✓ Wide moat':v>20?'◆ Decent':'⚠ Thin',om:v=>v>20?'✓ Efficient':v>10?'◆ Average':'⚠ Slim'};return(t[m]||(()=>''))(v);}
+function barColor(p){return p>66?'var(--c-green)':p>33?'var(--c-warn)':'var(--c-danger)';}
+function verdictClass(v){return v==='BUY'?'verdict-buy':v==='AVOID'?'verdict-avoid':'verdict-hold';}
+function moatClass(r){return r==='Strong'?'score-strong':r==='Moderate'?'score-moderate':'score-weak';}
+
+function renderResult(d,f,q){
+  const pos=d.priceChange>=0, cc=pos?'var(--c-green)':'var(--c-danger)', cs=pos?'+':'';
+  const mos=d.marginOfSafety;
+  const mc=mos>20?'var(--c-green)':mos>0?'var(--c-warn)':'var(--c-danger)';
+  const ml=mos>20?'✓ Margin of Safety Present':mos>0?'◆ Slight Discount':'⚠ Above Intrinsic Value';
+  const sc=d.valueScore>70?'var(--c-green)':d.valueScore>45?'var(--c-warn)':'var(--c-danger)';
+  const h52=f.high52||q.h, l52=f.low52||q.l;
+  const pp=(h52&&l52&&h52!==l52)?Math.round(((d.currentPrice-l52)/(h52-l52))*100):null;
+
+  const metrics=[
+    {label:'P/E Ratio',val:fmt(d.peRatio),sig:sigClass('pe',d.peRatio),lbl:sigLabel('pe',d.peRatio)},
+    {label:'P/B Ratio',val:fmt(d.pbRatio),sig:sigClass('pb',d.pbRatio),lbl:sigLabel('pb',d.pbRatio)},
+    {label:'Debt / Equity',val:fmt(d.debtToEquity,2),sig:sigClass('de',d.debtToEquity),lbl:sigLabel('de',d.debtToEquity)},
+    {label:'ROE %',val:fmt(d.roe)+'%',sig:sigClass('roe',d.roe),lbl:sigLabel('roe',d.roe)},
+    {label:'FCF Yield',val:fmt(d.fcfYield)+'%',sig:sigClass('fcf',d.fcfYield),lbl:sigLabel('fcf',d.fcfYield)},
+    {label:'Current Ratio',val:fmt(d.currentRatio,2),sig:sigClass('cr',d.currentRatio),lbl:sigLabel('cr',d.currentRatio)},
+    {label:'Gross Margin',val:fmt(d.grossMargin)+'%',sig:sigClass('gm',d.grossMargin),lbl:sigLabel('gm',d.grossMargin)},
+    {label:'Op. Margin',val:fmt(d.operatingMargin)+'%',sig:sigClass('om',d.operatingMargin),lbl:sigLabel('om',d.operatingMargin)},
+  ];
+
+  const bars=[
+    {label:'Revenue 3yr',val:d.revenueGrowth5yr,max:30},
+    {label:'Earnings 3yr',val:d.earningsGrowth5yr,max:30},
+    {label:'Dividend Yield',val:d.dividendYield,max:10},
+  ];
+
+  const mH=metrics.map(m=>`<div class="metric-card"><div class="metric-label">${m.label}</div><div class="metric-value">${m.val}</div><div class="metric-signal ${m.sig}">${m.lbl}</div></div>`).join('');
+  const bH=bars.map(b=>{const p=Math.min(100,Math.max(0,((b.val||0)/b.max)*100));return`<div class="bar-row"><span class="bar-label">${b.label}</span><div class="bar-track"><div class="bar-fill" style="width:${p.toFixed(1)}%;background:${barColor(p)}"></div></div><span class="bar-val">${fmt(b.val)}%</span></div>`;}).join('');
+  const moH=(d.moatFactors||[]).map(m=>`<div class="moat-item"><span style="color:var(--c-text)">${m.name}</span><span class="moat-score ${moatClass(m.rating)}">${m.rating}</span></div>`).join('');
+  const rH=(d.riskFlags||[]).map(r=>`<div class="risk-flag"><div class="flag-dot flag-${r.level}"></div><span>${r.text}</span></div>`).join('');
+  const pH=f.peers.length?`<div style="margin-top:14px"><div class="section-title">Peers</div><div class="peers-row">${f.peers.map(p=>`<button class="peer-chip" onclick="setTicker('${p}');runAnalysis()">${p}</button>`).join('')}</div></div>`:'';
+  const sH=(f.bullishPct&&f.bearishPct)?`<div style="margin-top:14px"><div class="section-title">News Sentiment</div><div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:5px"><span style="color:var(--c-green)">Bullish ${(f.bullishPct*100).toFixed(0)}%</span><span style="color:var(--c-danger)">Bearish ${(f.bearishPct*100).toFixed(0)}%</span></div><div class="sentiment-bar"><div style="width:${(f.bullishPct*100).toFixed(1)}%;background:var(--c-green)"></div><div style="width:${(f.bearishPct*100).toFixed(1)}%;background:var(--c-danger)"></div></div></div>`:'';
+  const rngH=(h52&&l52&&pp!==null)?`<div style="margin-top:14px"><div class="section-title">52-Week Range</div><div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--c-muted);margin-bottom:5px"><span>$${fmt(l52,2)}</span><span style="color:var(--c-text)">$${fmt(d.currentPrice,2)}</span><span>$${fmt(h52,2)}</span></div><div class="bar-track" style="height:8px"><div class="bar-fill" style="width:${pp}%;background:${pp<30?'var(--c-green)':pp>80?'var(--c-danger)':'var(--c-warn)'}"></div></div></div>`:'';
+
+  document.getElementById('output').innerHTML=`
+    <div class="stock-header">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+          <span class="stock-ticker-lbl">${d.ticker}</span>
+          <span class="data-tag">FINNHUB LIVE</span>
+          ${f.marketCap?`<span style="font-family:var(--mono);font-size:11px;color:var(--c-muted)">${fmtMcap(f.marketCap)}</span>`:''}
+        </div>
+        <div class="stock-name">${d.companyName}</div>
+        <div style="font-size:12px;color:var(--c-muted);margin-top:4px">${d.sector}${f.exchange?' · '+f.exchange:''}</div>
+        <div class="price-row">
+          <span class="live-price">$${fmt(d.currentPrice,2)}</span>
+          <span class="price-change" style="color:${cc}">${cs}${fmt(d.priceChange,2)} (${cs}${fmt(d.priceChangePct,2)}%)</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--c-muted);margin-top:5px">H: $${fmt(q.h,2)} &nbsp;·&nbsp; L: $${fmt(q.l,2)} &nbsp;·&nbsp; Prev: $${fmt(q.pc,2)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px;flex-shrink:0">
+        <span class="verdict-badge ${verdictClass(d.verdict)}">${d.verdict}</span>
+        <div class="score-circle"><div class="score-num" style="color:${sc}">${Math.round(d.valueScore)}</div><div class="score-lbl">Score</div></div>
+      </div>
+    </div>
+
+    <div class="intrinsic-block">
+      <div class="intrinsic-label">Intrinsic Value Estimates</div>
+      <div class="intrinsic-values">
+        <div><div class="iv-name">Current Price</div><div class="iv-val">$${fmt(d.currentPrice,2)}</div></div>
+        <div><div class="iv-name">DCF Value</div><div class="iv-val">$${fmt(d.intrinsicValueDCF,2)}</div></div>
+        <div><div class="iv-name">Graham Number</div><div class="iv-val">$${fmt(d.intrinsicValueGraham,2)}</div></div>
+        <div><div class="iv-name">Margin of Safety</div><div class="iv-val" style="color:${mc}">${fmt(mos,1)}%</div><div class="iv-margin" style="color:${mc}">${ml}</div></div>
+      </div>
+    </div>
+
+    <div class="section-title">Key Metrics</div>
+    <div class="metrics-grid">${mH}</div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="section-title">Economic Moat</div>
+        ${moH}${pH}
+      </div>
+      <div class="panel">
+        <div class="section-title">Growth &amp; Income</div>
+        ${bH}${rngH}${sH}
+        <div style="margin-top:16px">
+          <div class="section-title">Risk Flags</div>
+          <div class="risk-flags">${rH}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Analyst Commentary</div>
+    <div class="ai-analysis"><div class="ai-text">${d.qualitativeAnalysis}</div></div>
+
+    <div class="disclaimer">⚠ Price data via Finnhub (real-time for US exchanges during market hours). Intrinsic value estimates are AI-generated using real fundamentals. For educational purposes only — not financial advice. Always verify independently before investing.</div>`;
+}
+
+document.getElementById('tickerInput').addEventListener('keydown',e=>{if(e.key==='Enter')runAnalysis();});
+</script>
+</body>
+</html>
